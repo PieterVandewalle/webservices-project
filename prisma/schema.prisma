@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Post {
+  id             Int            @id @default(autoincrement())
+  date           DateTime       @default(now())
+  title          String
+  description    String         @db.Text
+  price          Float
+  category       Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId     Int
+  deliveryType   DeliveryType   @relation(fields: [deliveryTypeId], references: [id], onDelete: Cascade)
+  deliveryTypeId Int
+  city           String
+  userId         Int
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  favorites      Favorite[]
+  images         Image[]
+  conversations  Conversation[]
+}
+
+model Image {
+  id       Int    @id @default(autoincrement())
+  blobName String
+  url      String
+  postId   Int
+  post     Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Favorite {
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId Int
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model Category {
+  id       Int    @id @default(autoincrement())
+  name     String @unique
+  blobName String
+  imageUrl String
+  posts    Post[]
+}
+
+model DeliveryType {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  posts Post[]
+}
+
+model User {
+  id                         Int            @id @default(autoincrement())
+  auth0id                    String         @unique
+  username                   String         @unique
+  posts                      Post[]
+  favorite                   Favorite[]
+  conversationAsPostOwner    Conversation[] @relation("PostOwnerConversations")
+  conversationsAsPostReplier Conversation[] @relation("PostReplierConversations")
+  messages                   Message[]
+}
+
+model Conversation {
+  id                   Int       @id @default(autoincrement())
+  postId               Int
+  post                 Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postOwnerId          Int
+  postOwner            User      @relation("PostOwnerConversations", fields: [postOwnerId], references: [id], onDelete: Cascade)
+  postReplierId        Int
+  postReplier          User      @relation("PostReplierConversations", fields: [postReplierId], references: [id], onDelete: Cascade)
+  messages             Message[]
+  deletedByPostReplier Boolean   @default(false)
+  deletedByPostOwner   Boolean   @default(false)
+}
+
+model Message {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  content        String       @db.VarChar(255)
+  senderId       Int?
+  sender         User?        @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  timestamp      DateTime     @default(now())
+}
